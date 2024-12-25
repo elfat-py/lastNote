@@ -4,7 +4,7 @@ from datetime import datetime
 
 class Database:
     def __init__(self):
-        self.conn = sqlite3.connect('todo1.db')
+        self.conn = sqlite3.connect('todo.db')
         self.cursor = self.conn.cursor()
         self.cursor.execute('''
         CREATE TABLE IF NOT EXISTS todo (
