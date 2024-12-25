@@ -1,6 +1,7 @@
 import sqlite3
 from datetime import datetime
 
+
 class Database:
     def __init__(self):
         self.conn = sqlite3.connect('todo1.db')
@@ -43,9 +44,3 @@ class Database:
         SELECT * FROM todo WHERE neededTime LIKE ?
         ''', (f'{datetime.now().strftime("%Y-%m-%d")}%',))
         return self.cursor.fetchall()
-#
-# if __name__ == '__main__':
-#     db = Database()
-#     db.save('2021-10-10 10:10:10', 'Hello', 'World', '2021-10-10 10:10:10')
-#     print(db.getAll())
-#     db.close()

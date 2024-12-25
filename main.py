@@ -1,171 +1,145 @@
 from datetime import datetime, timedelta
-import sqlite3
 import os
-from random import choice
-
 from termcolor import cprint
-
 from database import Database
-
+from text import Text
 # I want that every time i open the terminal to display some message if i have some tasks to do
 # They will be saved by ID
 # We will save them into some DB (sqlite3)
 # when we are in the terminal it should be able to show us the tasks of the day (only titles)
-# create a new database if not exists
-db = Database()
-
 
 class Todo:
+    def __init__(self):
+        self.text = Text()
+        self.db = Database()
     def main(self):
-        cprint('Welcome to the lastTodo app!', 'red')
-        print('What would you like to do?')
-        print('1. Add a Note')
-        print('2. View Notes')
-        print('3. View Today\'s notes')
-        print('4. Delete a note')
-        print('5. Exit')
-        choice = input()
-        if choice == '1':
-            self.addNote()
-        elif choice == '2':
-            self.viewNotes()
-        elif choice == '3':
-            self.viewTodayNotes()
-        elif choice == '4':
-            exit()
-        else:
-            print('Invalid choice!')
-            self.main()
-
+        try:
+            self.text.mainMenuOptions()
+            choice = input().strip()
+            if choice == '1':
+                self.addNote()
+            elif choice == '2':
+                notes = self.db.getAll()
+                self.viewNotes(notes)
+            elif choice == '3':
+                notes = self.db.getTodayNotes()
+                self.viewNotes(notes)
+            elif choice == '4':
+                self.deleteNote()
+            elif choice == '0':  # Adjusted to '0' to match "Exit" correctly
+                cprint('Exiting...', 'red')
+                exit(0)
+            else:
+                cprint('Invalid choice! Please try again.', 'red')
+                self.main()
+        except KeyboardInterrupt:
+            cprint('Exiting...', 'red')
+            exit(0)
 
     def addNote(self):
-        cprint('Note title!', 'green')
-        noteTitle = input()
-        cprint('Note body!', 'green')
-        noteBody = input()
-        neededTime = self.getDate()
-        savedTime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        db.save(savedTime, noteTitle, noteBody, neededTime)
-        print('Note saved!')
-        self.main()
+        try:
+            cprint('Enter the title of your note:', 'green')
+            noteTitle = input().strip()
+            cprint('Enter the body of your note:', 'green')
+            noteBody = input().strip()
+            neededTime = self.getDate()
+            savedTime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            self.db.save(savedTime, noteTitle, noteBody, neededTime)
+            cprint('Note successfully saved!', 'green')
+            self.main()
+        except KeyboardInterrupt:
+            cprint('Exiting...', 'red')
+            exit(0)
+
+    def deleteNote(self):
+        try:
+            cprint('Here are your current notes:', 'green')
+            notes = self.db.getAll()
+            if not notes:
+                cprint('No notes available to delete.', 'red')
+                return self.main()
+                # TODO: should find a better way to handle this
+            # self.viewNotes(notes)  # Display all notes for reference
+            cprint('Enter the ID of the note you want to delete:', 'yellow')
+            try:
+                note_id = int(input().strip())
+                self.db.deleteNote(note_id)
+                cprint(f'Note with ID {note_id} has been deleted successfully.', 'green')
+            except ValueError:
+                cprint('Invalid ID entered. Please try again.', 'red')
+                return self.deleteNote()
+            self.main()
+        except KeyboardInterrupt:
+            cprint('Exiting...', 'red')
+            exit(0)
 
     def getDate(self):
-        cprint("When is the note needed?", 'red')
-        cprint("1. Today", 'red')
-        cprint("2. Tomorrow", 'red')
-        cprint("3. After a specific number of days", 'red')
-        cprint("4. Enter a specific date (e.g., 2024-12-31)", 'red')
-        cprint("0. Go back to the main menu", 'magenta')
-        cprint("Please choose an option:", 'yellow')
+        self.text.dateTimeOptions()
         choice = input("Choose an option (1/2/3/4): ").strip()
 
         if choice == '1':  # Today
-            return datetime.now()
+            return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         elif choice == '2':  # Tomorrow
-            return datetime.now() + timedelta(days=1)
+            return (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d %H:%M:%S')
         elif choice == '3':  # After a specific number of days
-            days = int(input("Enter the number of days: "))
-            return datetime.now() + timedelta(days=days)
-        elif choice == '4':
-            # TODO: the user might want to skip the time part
-            dateInput = input("Enter the date in YYYY-MM-DD format: ")
             try:
-                return datetime.strptime(dateInput, '%Y-%m-%d %H:%M:%S')  # Adjust format if needed
+                days = int(input("Enter the number of days: ").strip())
+                return (datetime.now() + timedelta(days=days)).strftime('%Y-%m-%d %H:%M:%S')
             except ValueError:
-                print("Invalid date format. Please try again.")
-                return self.getDate()  # Retry on invalid input
+                print("Invalid input. Please enter a valid number of days.")
+                return self.getDate()
+        elif choice == '4':  # Custom date and time
+            dateInput = input("Enter the date in YYYY-MM-DD format: ").strip()
+            timeInput = input("(Press enter to skip) Enter the time in HH:MM:SS format: ").strip()
+            if not timeInput:
+                timeInput = '00:00:00'
+            try:
+                return datetime.strptime(f"{dateInput} {timeInput}", '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                print("Invalid date or time format. Please try again.")
+                return self.getDate()
         elif choice == '0':
             self.main()
         else:
             print("Invalid choice. Please try again.")
-            return self.getDate()  # Retry on invalid input
+            return self.getDate()
 
-    def viewNotes(self):
-        notes = db.getAll()
-
-        # Check if there are any notes
-        if len(notes) == 0:
-            cprint('No notes found!', 'red')
-            cprint('Press any key to continue...', 'green')
-            input()
-            self.main()
-            return  # Return early to avoid further execution
-
-        iterationNote = 1  # Initialize the iteration counter outside the loop
-
-        for note in notes:
-            # Handle showing a message for older notes
-            if iterationNote == 3:
-                cprint('Continue with older notes...', 'green')
-                iterationNote = 1  # Reset the counter
+    def viewNotes(self, notes):
+        try:
+            if not notes:
+                cprint('No notes found!', 'red')
+                cprint('Press any key to return to the main menu...', 'green')
                 input()
-                os.system('cls')
+                self.main()
 
-            # Parse the date (assuming note[1] is a string from the database)
-            try:
-                date_obj = datetime.strptime(note[1], '%Y-%m-%d %H:%M:%S')  # Adjust format if needed
-                formatted_date = date_obj.strftime('%d-%m-%Y %H:%M:%S')
-            except ValueError:
-                formatted_date = 'Invalid date format'
+            iterationNote = 1  # Counter for displaying notes
+            for note in notes:
+                if None in note:
+                    cprint('Invalid note found. Skipping...', 'red')
+                    continue
+                if iterationNote == 3:  # Pause after every three notes
+                    cprint('Continue with older notes...', 'green')
+                    iterationNote = 1
+                    input()
+                    os.system('cls')
 
-            # Display the note
-            cprint('|---------------------------------|', 'red')
-            cprint('| ID: ' + str(note[0]) + ' |', 'blue')
-            cprint('| Date: ' + formatted_date + ' |', 'blue')
-            cprint('| Title: ' + note[2] + ' |', 'blue')
-            cprint('| Body: ' + note[3] + ' |', 'blue')
-            cprint('|---------------------------------|', 'red')
+                try:
+                    date_obj = datetime.strptime(note[4], '%Y-%m-%d %H:%M:%S')
+                    formatted_date = date_obj.strftime('%d-%m-%Y %H:%M:%S')
+                except ValueError:
+                    formatted_date = 'Invalid date format'
 
-            iterationNote += 1  # Increment the counter
+                self.text.showNotes(note, formatted_date)
+                iterationNote += 1
 
-        # Prompt to continue
-        cprint('Press any key to continue...', 'green')
-        input()
-        self.main()
-
-    def viewTodayNotes(self):
-        notes = db.getTodayNotes()
-        if len(notes) == 0:
-            cprint('No notes found!', 'red')
-            cprint('Press any key to continue...', 'green')
+            cprint('Press any key to return to the main menu...', 'green')
             input()
             self.main()
-            return  # Return early to avoid further execution
+        except KeyboardInterrupt:
+            cprint('Exiting...', 'red')
+            exit(0)
 
-        iterationNote = 1  # Initialize the iteration counter outside the loop
 
-        for note in notes:
-            # Handle showing a message for older notes
-            if iterationNote == 3:
-                cprint('0. Go back to the main menu', 'magenta')
-                cprint('Enter to continue with older notes... ', 'green')
-                iterationNote = 1  # Reset the counter
-                choice = input()
-                if choice == '1':
-                    self.main()
-                os.system('cls')
-
-            # Parse the date (assuming note[1] is a string from the database)
-            try:
-                date_obj = datetime.strptime(note[1], '%Y-%m-%d %H:%M:%S')  # Adjust format if needed
-                formatted_date = date_obj.strftime('%d-%m-%Y %H:%M:%S')
-            except ValueError:
-                formatted_date = 'Invalid date format'
-
-            # Display the note
-            cprint('|---------------------------------|', 'red')
-            cprint('| ID: ' + str(note[0]) + ' |', 'blue')
-            cprint('| Date: ' + formatted_date + ' |', 'blue')
-            cprint('| Title: ' + note[2] + ' |', 'blue')
-            cprint('| Body: ' + note[3] + ' |', 'blue')
-            cprint('|---------------------------------|', 'red')
-
-            iterationNote += 1  # Increment the counter
-
-        # Prompt to continue
-        cprint('Press any key to continue...', 'green')
-        input()
-        self.main()
 
 if __name__ == '__main__':
     todo = Todo()
