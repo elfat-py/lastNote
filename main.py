@@ -1,5 +1,4 @@
 import uuid
-
 import requests
 from datetime import datetime, timedelta
 from termcolor import cprint
@@ -7,8 +6,6 @@ from termcolor import cprint
 from text import Text
 
 SERVER_URL = "http://127.0.0.1:5000"
-
-
 class Todo:
     def __init__(self):
         self.current_user = None
@@ -17,7 +14,9 @@ class Todo:
     def main(self):
         try:
             if not self.current_user:
-                self.authenticate_user()
+                self.loginUser() # Try to authenticate the user automatically, if it goes bad it will request for the user to authenticate
+                if not self.current_user:
+                    self.authenticate_user()
             print(f"Welcome, {self.current_user['username']}!")
             self.text.mainMenuOptions()
             choice = input("Choose an option: ").strip()
@@ -70,15 +69,19 @@ class Todo:
             exit(1)
 
     def loginUser(self):
-        token = "4fdd3b58-8902-4172-8e8d-ccb10f11e2e2"
+        try:
+            with open("auth_token.txt", "r") as file:
+                token = file.read().strip()
+        except FileNotFoundError:
+            token = input("Enter your token: ").strip()
+
         response = requests.post(f"{SERVER_URL}/auth", json={"token": token})
         if response.status_code == 200:
             self.current_user = response.json()
-            print(self.current_user)
             cprint("User logged in successfully.", "green")
         else:
             cprint(f"Failed to login user: {response.json()['message']}", "red")
-            exit(1)
+            self.authenticate_user()
 
     def add_note(self):
         title = input("Enter note title: ").strip()
@@ -97,8 +100,10 @@ class Todo:
 
         if response.status_code == 201:
             cprint("Note added successfully.", "green")
+            self.main()
         else:
             cprint(f"Failed to add note: {response.json()['message']}", "red")
+            self.main()
 
     def getDate(self):
         self.text.dateTimeOptions()
@@ -154,6 +159,7 @@ class Todo:
             self.main()
         else:
             cprint(f"Failed to retrieve notes: {response.json()['message']}", "red")
+            self.main()
 
     def delete_note(self):
         try:
@@ -182,8 +188,10 @@ class Todo:
 
                     if response.status_code == 200:
                         cprint(f'Note with ID {note_id} has been deleted successfully.', 'green')
+                        self.main()
                     else:
                         cprint(f"Failed to delete note: {response.json()['message']}", "red")
+                        self.main()
 
                 except ValueError:
                     cprint('Invalid ID entered. Please try again.', 'red')
@@ -191,6 +199,7 @@ class Todo:
 
             else:
                 cprint(f"Failed to retrieve notes: {response.json()['message']}", "red")
+                self.main()
         except KeyboardInterrupt:
             cprint('Exiting...', 'red')
             exit(0)

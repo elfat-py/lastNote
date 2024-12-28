@@ -11,7 +11,7 @@ class Text:
         cprint('0. Exit', 'red')
 
     def authenticateOptions(self):
-        cprint("We will have to authenticate first?", 'red')
+        cprint("We will have to authenticate first!", 'red')
         cprint("1. Register", 'red')
         cprint("2. Log In", 'red')
         cprint("0. Exit", 'red')
