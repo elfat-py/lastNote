@@ -1,108 +1,104 @@
+import uuid
+
+import requests
 from datetime import datetime, timedelta
-import os
 from termcolor import cprint
-from database import Database
+
 from text import Text
+
+SERVER_URL = "http://127.0.0.1:5000"
 
 
 class Todo:
     def __init__(self):
+        self.current_user = None
         self.text = Text()
-        self.db = Database()
-        self.current_user = None  # Store the logged-in user's ID and username
 
     def main(self):
         try:
-            # Handle user login or registration
             if not self.current_user:
                 self.authenticate_user()
-
-            # Show the main menu
+            print(f"Welcome, {self.current_user['username']}!")
             self.text.mainMenuOptions()
-            choice = input().strip()
+            choice = input("Choose an option: ").strip()
+
             if choice == '1':
-                self.addNote()
+                self.add_note()
             elif choice == '2':
-                notes = self.db.get_all(self.current_user[0])  # Fetch notes for the logged-in user
-                self.viewNotes(notes)
+                self.view_notes()
             elif choice == '3':
-                notes = self.db.get_today_notes(self.current_user[0])  # Fetch today's notes for the user
-                self.viewNotes(notes)
+                self.view_notes(today=True)
             elif choice == '4':
-                self.deleteNote()
-            elif choice == '0':  # Adjusted to '0' to match "Exit" correctly
-                cprint('Exiting...', 'red')
+                self.delete_note()
+            elif choice == '0':
+                cprint("Exiting...", "red")
                 exit(0)
             else:
-                cprint('Invalid choice! Please try again.', 'red')
+                cprint("Invalid choice. Please try again.", "red")
                 self.main()
         except KeyboardInterrupt:
-            cprint('Exiting...', 'red')
+            cprint("Exiting...", "red")
             exit(0)
 
     def authenticate_user(self):
-        cprint("1. Register\n2. Login", 'green')
+        self.text.authenticateOptions()
         choice = input("Choose an option: ").strip()
-
         if choice == '1':
-            username = input("Enter username: ").strip()
-            self.db.register_user(username)
-            cprint("User registered successfully. Please log in to continue.", 'green')
-            self.authenticate_user()
+            self.registerUser()
         elif choice == '2':
-            token_file = input("Enter the path to your token file: ").strip()
-            print(token_file)
-            try:
-                with open(token_file, "r") as file:
-                    token = file.read().strip()
-                    user = self.db.authenticate_user(token)
-                    if user:
-                        self.current_user = user
-                        cprint(f"Welcome back, {self.current_user[1]}!", 'green')
-                    else:
-                        cprint("Invalid token. Please try again.", 'red')
-                        self.authenticate_user()
-            except FileNotFoundError:
-                cprint("Token file not found. Please try again.", 'red')
-                self.authenticate_user()
+            self.loginUser()
+        elif choice == '0':
+            cprint("Exiting...", "red")
+            exit(0)
         else:
-            cprint("Invalid choice. Please try again.", 'red')
-            self.authenticate_user()
+            cprint("Something somehow, somewhere went wrong", "red")
+            exit(1)
 
-    def addNote(self):
-        try:
-            cprint('Enter the title of your note:', 'green')
-            noteTitle = input().strip()
-            cprint('Enter the body of your note:', 'green')
-            noteBody = input().strip()
-            neededTime = self.getDate()
-            savedTime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            self.db.save(self.current_user[0], savedTime, noteTitle, noteBody, neededTime)  # Associate note with user
-            cprint('Note successfully saved!', 'green')
-            self.main()
-        except KeyboardInterrupt:
-            cprint('Exiting...', 'red')
-            exit(0)
+    def registerUser(self):
+        username = input("Enter your username: ").strip()
+        token = str(uuid.uuid4())  # Generate a unique token
+        response = requests.post(f"{SERVER_URL}/register", json={"username": username, "token": token})
 
-    def deleteNote(self):
-        try:
-            cprint('Here are your current notes:', 'green')
-            notes = self.db.get_all(self.current_user[0])
-            if not notes:
-                cprint('No notes available to delete.', 'red')
-                return self.main()
-            cprint('Enter the ID of the note you want to delete:', 'yellow')
-            try:
-                note_id = int(input().strip())
-                self.db.delete_note(self.current_user[0], note_id)  # Ensure only user's notes can be deleted
-                cprint(f'Note with ID {note_id} has been deleted successfully.', 'green')
-            except ValueError:
-                cprint('Invalid ID entered. Please try again.', 'red')
-                return self.deleteNote()
-            self.main()
-        except KeyboardInterrupt:
-            cprint('Exiting...', 'red')
-            exit(0)
+        with open("auth_token.txt", "w") as token_file:
+            token_file.write(token)
+        print("Token saved to auth_token.txt")
+
+        if response.status_code == 201:
+            cprint("User registered successfully.", "green")
+        else:
+            cprint(f"Failed to register user: {response.json()['message']}", "red")
+            exit(1)
+
+    def loginUser(self):
+        token = "4fdd3b58-8902-4172-8e8d-ccb10f11e2e2"
+        response = requests.post(f"{SERVER_URL}/auth", json={"token": token})
+        if response.status_code == 200:
+            self.current_user = response.json()
+            print(self.current_user)
+            cprint("User logged in successfully.", "green")
+        else:
+            cprint(f"Failed to login user: {response.json()['message']}", "red")
+            exit(1)
+
+    def add_note(self):
+        title = input("Enter note title: ").strip()
+        body = input("Enter note body: ").strip()
+
+        needed_time = self.getDate()
+        time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        response = requests.post(f"{SERVER_URL}/notes", json={
+            "user_id": self.current_user["user_id"],
+            "title": title,
+            "body": body,
+            "time": time,
+            "neededTime": needed_time
+        })
+
+        if response.status_code == 201:
+            cprint("Note added successfully.", "green")
+        else:
+            cprint(f"Failed to add note: {response.json()['message']}", "red")
 
     def getDate(self):
         self.text.dateTimeOptions()
@@ -135,8 +131,15 @@ class Todo:
             print("Invalid choice. Please try again.")
             return self.getDate()
 
-    def viewNotes(self, notes):
-        try:
+    def view_notes(self, today=False):
+        user_id = self.current_user["user_id"]
+        if today:
+            response = requests.get(f"{SERVER_URL}/notes/today/{user_id}")
+        else:
+            response = requests.get(f"{SERVER_URL}/notes/{user_id}")
+
+        if response.status_code == 200:
+            notes = response.json()["notes"]
             if not notes:
                 cprint('No notes found!', 'red')
                 cprint('Press any key to return to the main menu...', 'green')
@@ -146,15 +149,53 @@ class Todo:
             for note in notes:
                 formatted_date = note[4]
                 self.text.showNotes(note, formatted_date)
-
             cprint('Press any key to return to the main menu...', 'green')
             input()
             self.main()
+        else:
+            cprint(f"Failed to retrieve notes: {response.json()['message']}", "red")
+
+    def delete_note(self):
+        try:
+            user_id = self.current_user["user_id"]
+
+            response = requests.get(f"{SERVER_URL}/notes/{user_id}")
+            if response.status_code == 200:
+                notes = response.json()["notes"]
+                if not notes:
+                    cprint('No notes found!', 'red')
+                    cprint('Press any key to return to the main menu...', 'green')
+                    input()
+                    self.main()
+
+                for note in notes:
+                    formatted_date = note[4]
+                    self.text.showNotes(note, formatted_date)
+
+                cprint('Enter the ID of the note you want to delete:', 'yellow')
+                try:
+                    note_id = int(input().strip())
+                    response = requests.delete(f"{SERVER_URL}/notes", json={
+                        "user_id": user_id,
+                        "note_id": note_id
+                    })
+
+                    if response.status_code == 200:
+                        cprint(f'Note with ID {note_id} has been deleted successfully.', 'green')
+                    else:
+                        cprint(f"Failed to delete note: {response.json()['message']}", "red")
+
+                except ValueError:
+                    cprint('Invalid ID entered. Please try again.', 'red')
+                    return self.delete_note()
+
+            else:
+                cprint(f"Failed to retrieve notes: {response.json()['message']}", "red")
         except KeyboardInterrupt:
             cprint('Exiting...', 'red')
             exit(0)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     todo = Todo()
     todo.main()

@@ -10,6 +10,12 @@ class Text:
         cprint('4. Delete a note', 'red')
         cprint('0. Exit', 'red')
 
+    def authenticateOptions(self):
+        cprint("We will have to authenticate first?", 'red')
+        cprint("1. Register", 'red')
+        cprint("2. Log In", 'red')
+        cprint("0. Exit", 'red')
+
     def dateTimeOptions(self):
         cprint("When is the note needed?", 'red')
         cprint("1. Today", 'red')
