@@ -3,26 +3,30 @@ import os
 from termcolor import cprint
 from database import Database
 from text import Text
-# I want that every time i open the terminal to display some message if i have some tasks to do
-# They will be saved by ID
-# We will save them into some DB (sqlite3)
-# when we are in the terminal it should be able to show us the tasks of the day (only titles)
+
 
 class Todo:
     def __init__(self):
         self.text = Text()
         self.db = Database()
+        self.current_user = None  # Store the logged-in user's ID and username
+
     def main(self):
         try:
+            # Handle user login or registration
+            if not self.current_user:
+                self.authenticate_user()
+
+            # Show the main menu
             self.text.mainMenuOptions()
             choice = input().strip()
             if choice == '1':
                 self.addNote()
             elif choice == '2':
-                notes = self.db.getAll()
+                notes = self.db.get_all(self.current_user[0])  # Fetch notes for the logged-in user
                 self.viewNotes(notes)
             elif choice == '3':
-                notes = self.db.getTodayNotes()
+                notes = self.db.get_today_notes(self.current_user[0])  # Fetch today's notes for the user
                 self.viewNotes(notes)
             elif choice == '4':
                 self.deleteNote()
@@ -36,6 +40,35 @@ class Todo:
             cprint('Exiting...', 'red')
             exit(0)
 
+    def authenticate_user(self):
+        cprint("1. Register\n2. Login", 'green')
+        choice = input("Choose an option: ").strip()
+
+        if choice == '1':
+            username = input("Enter username: ").strip()
+            self.db.register_user(username)
+            cprint("User registered successfully. Please log in to continue.", 'green')
+            self.authenticate_user()
+        elif choice == '2':
+            token_file = input("Enter the path to your token file: ").strip()
+            print(token_file)
+            try:
+                with open(token_file, "r") as file:
+                    token = file.read().strip()
+                    user = self.db.authenticate_user(token)
+                    if user:
+                        self.current_user = user
+                        cprint(f"Welcome back, {self.current_user[1]}!", 'green')
+                    else:
+                        cprint("Invalid token. Please try again.", 'red')
+                        self.authenticate_user()
+            except FileNotFoundError:
+                cprint("Token file not found. Please try again.", 'red')
+                self.authenticate_user()
+        else:
+            cprint("Invalid choice. Please try again.", 'red')
+            self.authenticate_user()
+
     def addNote(self):
         try:
             cprint('Enter the title of your note:', 'green')
@@ -44,7 +77,7 @@ class Todo:
             noteBody = input().strip()
             neededTime = self.getDate()
             savedTime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            self.db.save(savedTime, noteTitle, noteBody, neededTime)
+            self.db.save(self.current_user[0], savedTime, noteTitle, noteBody, neededTime)  # Associate note with user
             cprint('Note successfully saved!', 'green')
             self.main()
         except KeyboardInterrupt:
@@ -54,16 +87,14 @@ class Todo:
     def deleteNote(self):
         try:
             cprint('Here are your current notes:', 'green')
-            notes = self.db.getAll()
+            notes = self.db.get_all(self.current_user[0])
             if not notes:
                 cprint('No notes available to delete.', 'red')
                 return self.main()
-                # TODO: should find a better way to handle this
-            # self.viewNotes(notes)  # Display all notes for reference
             cprint('Enter the ID of the note you want to delete:', 'yellow')
             try:
                 note_id = int(input().strip())
-                self.db.deleteNote(note_id)
+                self.db.delete_note(self.current_user[0], note_id)  # Ensure only user's notes can be deleted
                 cprint(f'Note with ID {note_id} has been deleted successfully.', 'green')
             except ValueError:
                 cprint('Invalid ID entered. Please try again.', 'red')
@@ -112,25 +143,9 @@ class Todo:
                 input()
                 self.main()
 
-            iterationNote = 1  # Counter for displaying notes
             for note in notes:
-                if None in note:
-                    cprint('Invalid note found. Skipping...', 'red')
-                    continue
-                if iterationNote == 3:  # Pause after every three notes
-                    cprint('Continue with older notes...', 'green')
-                    iterationNote = 1
-                    input()
-                    os.system('cls')
-
-                try:
-                    date_obj = datetime.strptime(note[4], '%Y-%m-%d %H:%M:%S')
-                    formatted_date = date_obj.strftime('%d-%m-%Y %H:%M:%S')
-                except ValueError:
-                    formatted_date = 'Invalid date format'
-
+                formatted_date = note[4]
                 self.text.showNotes(note, formatted_date)
-                iterationNote += 1
 
             cprint('Press any key to return to the main menu...', 'green')
             input()
@@ -138,7 +153,6 @@ class Todo:
         except KeyboardInterrupt:
             cprint('Exiting...', 'red')
             exit(0)
-
 
 
 if __name__ == '__main__':
