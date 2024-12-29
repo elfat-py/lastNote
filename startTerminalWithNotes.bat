@@ -1,4 +1,4 @@
 @echo off
-cd "C:\Users\user\PycharmProjects\lastnote"
+cd "path\to\lastnote"
 python main.py
 pause
