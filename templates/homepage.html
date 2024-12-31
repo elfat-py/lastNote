@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>lastNote - Terminal Task Manager</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="terminal">
+        <h1>Welcome to <span class="highlight">lastNote</span></h1>
+        <p>Your terminal-based task manager for ultimate productivity... or procrastination.</p>
+        <hr>
+
+        <section>
+            <h2>About lastNote</h2>
+            <p><strong>lastNote</strong> is the <em>ultimate procrastinator-friendly</em> task management app designed for your terminal. It ensures that every time you open your terminal, you're greeted with your tasks, motivating you to stay productive (or at least try to).</p>
+        </section>
+
+        <hr>
+
+        <section>
+            <h2>Features</h2>
+            <ul>
+                <li><strong>Add Notes:</strong> Write down your big ideas or "I'll do this tomorrow" moments.</li>
+                <li><strong>View All Notes:</strong> Remind yourself how productive you were (or weren’t).</li>
+                <li><strong>View Today's Notes:</strong> Get called out on the tasks you’ve been avoiding today.</li>
+                <li><strong>Delete Notes:</strong> Pretend they never existed.</li>
+                <li><strong>Humorous Terminal Presence:</strong> No more escaping from your to-dos; they’ll greet you every time you open your terminal.</li>
+            </ul>
+        </section>
+
+        <hr>
+
+        <section>
+            <h2>How It Works</h2>
+            <p>Here's what makes <strong>lastNote</strong> unique:</p>
+            <ul>
+                <li><strong>Notes by ID:</strong> Tasks are saved with a unique ID in an SQLite database.</li>
+                <li><strong>Smart Filters:</strong> Easily view today’s tasks or all tasks at once.</li>
+                <li><strong>Persistent Storage:</strong> Notes are stored safely in a database, ensuring they’re always available (for better or worse).</li>
+                <li><strong>Automatic Deletion:</strong> Outdated tasks are deleted automatically, keeping things tidy.</li>
+            </ul>
+        </section>
+
+        <hr>
+
+        <section>
+            <h2>Installation</h2>
+            <ol>
+                <li>Clone the GitHub repository:
+                    <pre><code>git clone https://github.com/elfat-py/lastNote</code></pre>
+                </li>
+                <li>Navigate to the project folder:
+                    <pre><code>cd lastNote</code></pre>
+                </li>
+                <li>Install dependencies:
+                    <pre><code>pip install termcolor</code></pre>
+                </li>
+                <li>Set up automatic terminal execution:
+                    <ul>
+                        <li><strong>For Windows:</strong> Copy the provided <code>startTerminalWithNotes.bat</code> file to your Startup folder:
+                            <pre><code>shell:startup</code></pre>
+                        </li>
+                    </ul>
+                </li>
+            </ol>
+        </section>
+
+        <hr>
+
+        <section>
+            <h2>Usage</h2>
+            <p>Once installed, here’s how you can use <strong>lastNote</strong>:</p>
+            <ul>
+                <li><strong>Add Notes:</strong> Title your task and give it a body (or leave it blank for later).</li>
+                <li><strong>View Notes:</strong> See all your notes listed by ID, date, title, and body.</li>
+                <li><strong>View Today’s Notes:</strong> Only see tasks scheduled for today.</li>
+                <li><strong>Delete Notes:</strong> Erase tasks you no longer need.</li>
+            </ul>
+            <p>To run the app manually:</p>
+            <pre><code>python main.py</code></pre>
+            <p>Or let it run automatically each time you open your terminal (if you set up the startup file).</p>
+        </section>
+
+        <hr>
+
+        <section>
+            <h2>Pro Tips</h2>
+            <ul>
+                <li><strong>Mess up a date?</strong> Just delete the note and start over.</li>
+                <li><strong>Too many notes?</strong> Enjoy scrolling through your tasks… endlessly.</li>
+                <li><strong>Afraid of commitment?</strong> Use the "Delete Note" option liberally—no judgment here!</li>
+            </ul>
+        </section>
+
+        <hr>
+
+        <section>
+            <h2>Learn More</h2>
+            <ul>
+                <li><a href="https://github.com/elfat-py/lastNote" target="_blank">GitHub Repository</a></li>
+                <li>Check out the <a href="/documentation">documentation</a>.</li>
+            </ul>
+        </section>
+
+        <hr>
+
+        <footer>
+            <p>Made with ❤️ for procrastinators. Need help? Reach out on <a href="https://github.com/elfat-py/lastNote/issues" target="_blank">GitHub</a>!</p>
+        </footer>
+    </div>
+</body>
+</html>

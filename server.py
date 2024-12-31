@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 import sqlite3
 
 app = Flask(__name__)
@@ -37,8 +37,8 @@ def init_db():
 init_db()
 
 @app.route("/")
-def home():
-    return jsonify({"message": "Welcome to the TODO server"}), 200
+def homepage():
+    return render_template("homepage.html")
 
 # User registration
 @app.route("/register", methods=["POST"])
