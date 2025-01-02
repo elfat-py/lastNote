@@ -44,7 +44,7 @@ Tired of forgetting your plans until it's way too late? Fear not! **LastNote** i
 
 3. Install dependencies:
    ```bash
-   pip install termcolor
+   pip install -r requirements.txt
    ```
    Make sure sqlite3 is available (it comes pre-installed with Python).
 
