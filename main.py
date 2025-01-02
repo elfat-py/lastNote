@@ -1,3 +1,4 @@
+import sys
 import uuid
 import requests
 from datetime import datetime, timedelta
@@ -5,39 +6,58 @@ from termcolor import cprint
 
 from text import Text
 
-SERVER_URL = "http://127.0.0.1:5000"
+SERVER_URL = "https://last-note.tech/"
+
+
 class Todo:
     def __init__(self):
         self.current_user = None
         self.text = Text()
 
     def main(self):
+        """
+        Main entry point for the application. Handles user authentication
+        and navigates through the main menu or directly to 'auto' mode.
+        """
         try:
             if not self.current_user:
-                self.loginUser() # Try to authenticate the user automatically, if it goes bad it will request for the user to authenticate
+                self.loginUser()  # Attempt to authenticate the user
                 if not self.current_user:
                     self.authenticate_user()
-            print(f"Welcome, {self.current_user['username']}!")
-            self.text.mainMenuOptions()
-            choice = input("Choose an option: ").strip()
 
-            if choice == '1':
-                self.add_note()
-            elif choice == '2':
-                self.view_notes()
-            elif choice == '3':
+            # Auto mode: Show today's notes and exit
+            if len(sys.argv) > 1 and sys.argv[1] == 'auto':
+                cprint(f"Welcome, {self.current_user['username']}!", "yellow")
+                cprint("The notes for today are as follows:", "green")
                 self.view_notes(today=True)
-            elif choice == '4':
-                self.delete_note()
-            elif choice == '0':
-                cprint("Exiting...", "red")
-                exit(0)
-            else:
-                cprint("Invalid choice. Please try again.", "red")
-                self.main()
+                return  # Exit after showing today's notes in auto mode
+
+            # Main menu for manual interaction
+            cprint(f"Welcome, {self.current_user['username']}!", "yellow")
+            while True:
+                self.text.mainMenuOptions()
+                choice = input("Choose an option: ").strip()
+
+                if choice == '1':
+                    self.add_note()
+                elif choice == '2':
+                    self.view_notes()
+                elif choice == '3':
+                    self.view_notes(today=True)
+                elif choice == '4':
+                    self.delete_note()
+                elif choice == '0':
+                    cprint("Exiting...", "red")
+                    exit(0)
+                else:
+                    cprint("Invalid choice. Please try again.", "red")
+
         except KeyboardInterrupt:
             cprint("Exiting...", "red")
             exit(0)
+        except Exception as e:
+            cprint(f"An unexpected error occurred: {str(e)}", "red")
+            exit(1)
 
     def authenticate_user(self):
         self.text.authenticateOptions()
@@ -73,6 +93,8 @@ class Todo:
             with open("auth_token.txt", "r") as file:
                 token = file.read().strip()
         except FileNotFoundError:
+            cprint("No token found. If you have a token place it into some txt file auth_token.txt on the root dir where lastNote.exe file is located for auto-login", "yellow")
+            cprint("Please register or enter your token.", "red")
             token = input("Enter your token: ").strip()
 
         response = requests.post(f"{SERVER_URL}/auth", json={"token": token})
@@ -137,28 +159,48 @@ class Todo:
             return self.getDate()
 
     def view_notes(self, today=False):
-        user_id = self.current_user["user_id"]
-        if today:
-            response = requests.get(f"{SERVER_URL}/notes/today/{user_id}")
-        else:
-            response = requests.get(f"{SERVER_URL}/notes/{user_id}")
+        """
+        Fetch and display notes for the current user.
+        If 'today' is True, only today's notes are fetched; otherwise, fetch all notes.
+        """
+        try:
+            user_id = self.current_user["user_id"]
+            endpoint = f"{SERVER_URL}/notes/today/{user_id}" if today else f"{SERVER_URL}/notes/{user_id}"
+            response = requests.get(endpoint)
 
-        if response.status_code == 200:
-            notes = response.json()["notes"]
-            if not notes:
-                cprint('No notes found!', 'red')
-                cprint('Press any key to return to the main menu...', 'green')
-                input()
+            if response.status_code == 200:
+                notes = response.json().get("notes", [])
+                if not notes:
+                    cprint('No notes found, have a great time!', 'red')
+                    self._handle_exit_or_menu()
+                    return
+
+                for note in notes:
+                    formatted_date = note[4]  # Assuming note[4] contains the date
+                    self.text.showNotes(note, formatted_date)
+
+                self._handle_exit_or_menu()
+            else:
+                error_message = response.json().get('message', 'Unknown error occurred')
+                cprint(f"Failed to retrieve notes: {error_message}", "red")
                 self.main()
 
-            for note in notes:
-                formatted_date = note[4]
-                self.text.showNotes(note, formatted_date)
+        except Exception as e:
+            cprint(f"An error occurred while fetching notes: {str(e)}", "red")
+            self.main()
+
+    def _handle_exit_or_menu(self):
+        """
+        Handle behavior based on whether the program is in 'auto' mode or manual mode.
+        """
+        if len(sys.argv) > 1 and sys.argv[1] == 'auto':
+            cprint('Here')
+            cprint('Press any key to exit...', 'green')
+            input()
+            sys.exit(0)
+        else:
             cprint('Press any key to return to the main menu...', 'green')
             input()
-            self.main()
-        else:
-            cprint(f"Failed to retrieve notes: {response.json()['message']}", "red")
             self.main()
 
     def delete_note(self):

@@ -3,6 +3,7 @@ from datetime import datetime
 from flask import Flask, request, jsonify, render_template
 import sqlite3
 
+# Check this seems interesting: TODO https://jokeapi.dev/#getting-started
 app = Flask(__name__)
 
 DB_PATH = "todo.db"
@@ -25,7 +26,7 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
         time TEXT,
-        title TEXT,
+      title TEXT,
         body TEXT,
         neededTime TEXT,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
@@ -103,7 +104,6 @@ def add_note():
     conn.commit()
     conn.close()
     return jsonify({"message": "Note added successfully"}), 201
-
 # Get notes for a user
 @app.route("/notes/<int:user_id>", methods=["GET"])
 def get_notes(user_id):
@@ -113,6 +113,7 @@ def get_notes(user_id):
     notes = cursor.fetchall()
     conn.close()
     return jsonify({"notes": notes}), 200
+
 
 # Get today's notes for a user
 @app.route("/notes/today/<int:user_id>", methods=["GET"])
